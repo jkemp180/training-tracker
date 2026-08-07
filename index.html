@@ -13,32 +13,20 @@
   <link rel="apple-touch-icon" href="icon.svg">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="preview-styles.css">
+  <link rel="stylesheet" href="workout-polish.css">
   <title>Hybrid Training Tracker</title>
 </head>
 <body>
   <div id="app" class="app-shell">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow" id="todayLabel">TODAY</p>
-        <h1 id="pageTitle">Training</h1>
-      </div>
-      <button class="icon-button" id="themeToggle" aria-label="Toggle theme">◐</button>
-    </header>
-
+    <header class="topbar"><div><p class="eyebrow" id="todayLabel">TODAY</p><h1 id="pageTitle">Training</h1></div><button class="icon-button" id="themeToggle" aria-label="Toggle theme">◐</button></header>
     <main id="view" class="view" aria-live="polite"></main>
-
-    <nav class="bottom-nav" aria-label="Primary navigation">
-      <button data-view="today" class="nav-item active"><span>●</span><small>Today</small></button>
-      <button data-view="week" class="nav-item"><span>▦</span><small>Week</small></button>
-      <button data-view="progress" class="nav-item"><span>↗</span><small>Progress</small></button>
-      <button data-view="settings" class="nav-item"><span>⚙</span><small>Settings</small></button>
-    </nav>
+    <nav class="bottom-nav" aria-label="Primary navigation"><button data-view="today" class="nav-item active"><span>●</span><small>Today</small></button><button data-view="week" class="nav-item"><span>▦</span><small>Week</small></button><button data-view="progress" class="nav-item"><span>↗</span><small>Progress</small></button><button data-view="settings" class="nav-item"><span>⚙</span><small>Settings</small></button></nav>
   </div>
-
   <dialog id="workoutDialog" class="sheet"></dialog>
   <input id="importInput" type="file" accept="application/json" hidden>
   <script src="app.js" defer></script>
   <script src="exercise-mode.js" defer></script>
+  <script src="rest-timer.js" defer></script>
   <script src="training-overrides.js" defer></script>
   <script src="start-date-fix.js" defer></script>
   <script src="schedule-logic.js" defer></script>
