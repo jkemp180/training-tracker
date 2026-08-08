@@ -1,34 +1,20 @@
 (() => {
-  const META_KEY = 'hybrid-training-backup-meta-v1';
-  const ALLOWED = ['startDate','weight','theme','logs','prescriptions','history','runLevels'];
-
-  function meta(){try{return JSON.parse(localStorage.getItem(META_KEY)||'{}')}catch{return {}}}
-  function completed(){return Object.values(state.logs||{}).filter(x=>x?.completed).length}
-  function backupPayload(){const data={};ALLOWED.forEach(k=>{if(state[k]!==undefined)data[k]=state[k]});return {format:'hybrid-training-backup',version:2,createdAt:new Date().toISOString(),data}}
-  function validObject(value){return value && typeof value==='object' && !Array.isArray(value)}
+  const META_KEY='hybrid-training-backup-meta-v1';
+  const ALLOWED=['startDate','weight','theme','logs','prescriptions','history','runLevels'];
+  const meta=()=>{try{return JSON.parse(localStorage.getItem(META_KEY)||'{}')}catch{return {}}};
+  const completed=()=>Object.values(state.logs||{}).filter(x=>x?.completed).length;
+  const backupPayload=()=>{const data={};ALLOWED.forEach(k=>{if(state[k]!==undefined)data[k]=state[k]});return {format:'hybrid-training-backup',version:2,createdAt:new Date().toISOString(),data}};
+  const validObject=v=>v&&typeof v==='object'&&!Array.isArray(v);
   function validate(payload){if(!validObject(payload)||payload.format!=='hybrid-training-backup'||!validObject(payload.data))throw new Error('Not a Hybrid Training backup.');const d=payload.data;if(typeof d.startDate!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(d.startDate))throw new Error('Backup start date is invalid.');if(typeof d.weight!=='number'||!Number.isFinite(d.weight))throw new Error('Backup body weight is invalid.');if(typeof d.theme!=='string')throw new Error('Backup theme is invalid.');['logs','prescriptions','history'].forEach(k=>{if(!validObject(d[k]))throw new Error(`Backup ${k} is invalid.`)});if(d.runLevels!==undefined&&!validObject(d.runLevels))throw new Error('Backup running progression is invalid.');return d}
-  function markBackedUp(payload){localStorage.setItem(META_KEY,JSON.stringify({lastBackupAt:payload.createdAt,completedAtBackup:completed()}));setTimeout(()=>render('settings'),100)}
-  async function downloadBackup(){
-    const payload=backupPayload();
-    const name=`hybrid-training-backup-${payload.createdAt.slice(0,10)}.json`;
-    const file=new File([JSON.stringify(payload,null,2)],name,{type:'application/json'});
-    try{
-      if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
-        await navigator.share({title:'Hybrid Training backup',text:'Save this training backup to iCloud Drive or another safe location.',files:[file]});
-        markBackedUp(payload);
-        return;
-      }
-      const url=URL.createObjectURL(file);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);markBackedUp(payload);
-      alert('Backup created. Check Files/Downloads and move it to iCloud Drive if needed.');
-    }catch(err){
-      if(err?.name==='AbortError')return;
-      alert('Could not open the backup share sheet. Try opening the site in Safari and tap Back up my data again.');
-    }
-  }
-  function backupCard(){const m=meta(),since=Math.max(0,completed()-(m.completedAtBackup||0));return `<section class="card stack backup-card"><div><p class="eyebrow">YOUR TRAINING DATA</p><h3>Backup</h3><p class="muted">Your Home Screen app stores its training history on this iPhone. Tap below, then choose Save to Files and keep the JSON file in iCloud Drive.</p></div><div class="grid-2"><div class="metric"><span class="muted">Last backup</span><strong>${m.lastBackupAt?new Date(m.lastBackupAt).toLocaleDateString():'Never'}</strong></div><div class="metric"><span class="muted">New workouts</span><strong>${since}</strong></div></div>${since>=3||!m.lastBackupAt?`<div class="notice">${!m.lastBackupAt?'Create your first backup now.':`You have ${since} completed workouts since your last backup.`}</div>`:''}<button class="primary" id="safeExportBtn">Back up my data</button><button class="secondary" id="safeImportBtn">Restore from backup</button><p class="muted compact-help">After tapping backup: choose Save to Files → iCloud Drive. Backup includes workout logs, actual sets, strength progression, running levels, weight, start date and settings.</p></section>`}
+  function markBackedUp(payload){localStorage.setItem(META_KEY,JSON.stringify({lastBackupAt:payload.createdAt,completedAtBackup:completed()}));render('settings')}
+  async function shareBackup(){const payload=backupPayload(),name=`hybrid-training-backup-${payload.createdAt.slice(0,10)}.json`,file=new File([JSON.stringify(payload,null,2)],name,{type:'application/json'});try{if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){await navigator.share({files:[file],title:'Hybrid Training backup'});markBackedUp(payload);return}throw new Error('File sharing unavailable')}catch(err){if(err?.name==='AbortError')return;alert('File sharing is unavailable here. Use Copy backup below instead.')}}
+  async function copyBackup(){const payload=backupPayload(),text=JSON.stringify(payload);try{await navigator.clipboard.writeText(text);markBackedUp(payload);alert('Backup copied. Open Notes, create a note called Hybrid Training Backup, paste it, and keep the note in iCloud.')}catch(err){const area=document.createElement('textarea');area.value=text;area.style.position='fixed';area.style.inset='10px';area.style.zIndex='9999';document.body.appendChild(area);area.focus();area.select();const ok=document.execCommand('copy');area.remove();if(ok){markBackedUp(payload);alert('Backup copied. Paste it into an iCloud Note and keep it safe.')}else alert('Could not copy automatically. Try this button from Safari.')}}
+  function restoreData(data){const count=Object.values(data.logs||{}).filter(x=>x?.completed).length;if(!confirm(`Restore this backup?\n\nIt contains ${count} completed workouts.\n\nYour current app data will be replaced.`))return;ALLOWED.forEach(k=>delete state[k]);Object.assign(state,data);save();localStorage.setItem(META_KEY,JSON.stringify({lastBackupAt:new Date().toISOString(),completedAtBackup:count}));location.reload()}
+  function pasteRestore(){const text=prompt('Paste your Hybrid Training backup text here:');if(!text)return;try{restoreData(validate(JSON.parse(text)))}catch(err){alert(`Could not restore backup: ${err.message}`)}}
+  function backupCard(){const m=meta(),since=Math.max(0,completed()-(m.completedAtBackup||0));return `<section class="card stack backup-card"><div><p class="eyebrow">YOUR TRAINING DATA</p><h3>Backup</h3><p class="muted">Keep a copy outside this app before major updates.</p></div><div class="grid-2"><div class="metric"><span class="muted">Last backup</span><strong>${m.lastBackupAt?new Date(m.lastBackupAt).toLocaleDateString():'Never'}</strong></div><div class="metric"><span class="muted">New workouts</span><strong>${since}</strong></div></div>${since>=3||!m.lastBackupAt?`<div class="notice">${!m.lastBackupAt?'Create your first backup now.':`You have ${since} completed workouts since your last backup.`}</div>`:''}<button class="primary" id="copyBackupBtn">Copy backup</button><p class="muted compact-help">Recommended on iPhone: copy, paste into an iCloud Note named Hybrid Training Backup.</p><button class="secondary" id="safeExportBtn">Share backup file</button><button class="secondary" id="pasteRestoreBtn">Restore from copied backup</button><button class="secondary" id="safeImportBtn">Restore from backup file</button></section>`}
   const oldSettings=settingsView;settingsView=()=>backupCard()+oldSettings().replace('<button class="secondary" id="exportBtn">Export backup</button>','').replace('<button class="secondary" id="importBtn">Import backup</button>','');
-  const oldBind=bind;bind=function(view){oldBind(view);if(view==='settings'){safeExportBtn.onclick=downloadBackup;safeImportBtn.onclick=()=>importInput.click()}};
-  exportData=downloadBackup;
-  importInput.onchange=e=>{const file=e.target.files?.[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{const data=validate(JSON.parse(r.result));const count=Object.values(data.logs||{}).filter(x=>x?.completed).length;if(!confirm(`Restore this backup?\n\nIt contains ${count} completed workouts.\n\nYour current app data will be replaced.`))return;ALLOWED.forEach(k=>delete state[k]);Object.assign(state,data);save();localStorage.setItem(META_KEY,JSON.stringify({lastBackupAt:new Date().toISOString(),completedAtBackup:count}));location.reload()}catch(err){alert(`Could not restore backup: ${err.message}`)}finally{e.target.value=''}};r.readAsText(file)};
+  const oldBind=bind;bind=function(view){oldBind(view);if(view==='settings'){copyBackupBtn.onclick=copyBackup;safeExportBtn.onclick=shareBackup;pasteRestoreBtn.onclick=pasteRestore;safeImportBtn.onclick=()=>importInput.click()}};
+  exportData=shareBackup;
+  importInput.onchange=e=>{const file=e.target.files?.[0];if(!file)return;const r=new FileReader();r.onload=()=>{try{restoreData(validate(JSON.parse(r.result)))}catch(err){alert(`Could not restore backup: ${err.message}`)}finally{e.target.value=''}};r.readAsText(file)};
   window.trainingBackupStatus=()=>({lastBackupAt:meta().lastBackupAt||null,newWorkouts:Math.max(0,completed()-(meta().completedAtBackup||0))});
 })();
