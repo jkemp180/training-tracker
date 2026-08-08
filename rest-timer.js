@@ -34,12 +34,21 @@
     timerId = null;
   }
 
+  function setCountdown(value) {
+    const display = dialog.querySelector('[data-rest-countdown]');
+    if (!display) return;
+    if (display.textContent !== value) display.textContent = value;
+  }
+
   function updateTimer() {
     const display = dialog.querySelector('[data-rest-countdown]');
     if (!display) return stopTimer();
     const remaining = Math.max(0, Math.ceil((timerEnd - Date.now()) / 1000));
-    display.textContent = remaining ? format(remaining) : 'Ready';
-    display.closest('.rest-card')?.classList.toggle('ready', remaining === 0);
+    const value = remaining ? format(remaining) : 'Ready';
+    if (display.textContent !== value) display.textContent = value;
+    const card = display.closest('.rest-card');
+    const ready = remaining === 0;
+    if (card && card.classList.contains('ready') !== ready) card.classList.toggle('ready', ready);
     if (!remaining) {
       stopTimer();
       if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
@@ -57,18 +66,12 @@
     const title = dialog.querySelector('.player-title h2');
     const playerTitle = dialog.querySelector('.player-title');
     if (!title || !playerTitle) return;
+
     const exercise = title.textContent.trim();
     const seconds = restSeconds[exercise] || 90;
     let card = dialog.querySelector('.rest-card');
-    if (!card) {
-      card = document.createElement('section');
-      card.className = 'rest-card';
-      playerTitle.insertAdjacentElement('afterend', card);
-    }
-    card.innerHTML = `<span><small>Recommended rest</small><strong>${format(seconds)}</strong></span><span><small>Timer</small><strong data-rest-countdown>Not started</strong></span><button type="button" data-rest-start>Start</button>`;
-    card.querySelector('[data-rest-start]').onclick = () => startTimer(seconds);
-
     const completed = dialog.querySelectorAll('.player-set.completed').length;
+
     if (exercise !== previousExercise) {
       previousExercise = exercise;
       previousCompleted = completed;
@@ -77,8 +80,25 @@
       startTimer(seconds);
     }
     previousCompleted = completed;
+
+    if (card && card.dataset.exercise === exercise) return;
+
+    if (!card) {
+      card = document.createElement('section');
+      card.className = 'rest-card';
+      playerTitle.insertAdjacentElement('afterend', card);
+    }
+
+    card.dataset.exercise = exercise;
+    card.classList.remove('ready');
+    card.innerHTML = `<span><small>Recommended rest</small><strong>${format(seconds)}</strong></span><span><small>Timer</small><strong data-rest-countdown>Not started</strong></span><button type="button" data-rest-start>Start</button>`;
+    card.querySelector('[data-rest-start]').onclick = () => startTimer(seconds);
   }
 
   new MutationObserver(renderRestCard).observe(dialog, { childList: true, subtree: true });
-  dialog.addEventListener('close', stopTimer);
+  dialog.addEventListener('close', () => {
+    stopTimer();
+    previousExercise = '';
+    previousCompleted = 0;
+  });
 })();
