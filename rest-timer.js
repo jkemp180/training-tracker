@@ -1,104 +1,12 @@
 (() => {
   const restSeconds = {
-    'Bench press': 150,
-    'Back squat': 180,
-    'Romanian deadlift': 150,
-    'Barbell row': 120,
-    'Shoulder press': 120,
-    'Pull-ups': 120,
-    'Incline dumbbell press': 90,
-    'Lat pulldown': 90,
-    'Bulgarian split squat': 90,
-    'Leg curl': 75,
-    'Calf raise': 60,
-    'Lateral raise': 60,
-    'Triceps pressdown': 60,
-    'Face pull': 60,
-    'Hanging knee raise': 60
+    'Bench press': 150,'Back squat': 180,'Romanian deadlift': 150,'Barbell row': 120,'Shoulder press': 120,'Pull-ups': 120,'Incline dumbbell press': 90,'Lat pulldown': 90,'Bulgarian split squat': 90,'Leg curl': 75,'Calf raise': 60,'Lateral raise': 60,'Triceps pressdown': 60,'Face pull': 60,'Dumbbell curl': 75,'Hanging knee raise': 60,'Dead bug': 60
   };
-
-  const dialog = document.getElementById('workoutDialog');
-  let timerId = null;
-  let timerEnd = 0;
-  let previousExercise = '';
-  let previousCompleted = 0;
-
-  function format(seconds) {
-    const mins = Math.floor(seconds / 60);
-    const secs = String(seconds % 60).padStart(2, '0');
-    return `${mins}:${secs}`;
-  }
-
-  function stopTimer() {
-    clearInterval(timerId);
-    timerId = null;
-  }
-
-  function setCountdown(value) {
-    const display = dialog.querySelector('[data-rest-countdown]');
-    if (!display) return;
-    if (display.textContent !== value) display.textContent = value;
-  }
-
-  function updateTimer() {
-    const display = dialog.querySelector('[data-rest-countdown]');
-    if (!display) return stopTimer();
-    const remaining = Math.max(0, Math.ceil((timerEnd - Date.now()) / 1000));
-    const value = remaining ? format(remaining) : 'Ready';
-    if (display.textContent !== value) display.textContent = value;
-    const card = display.closest('.rest-card');
-    const ready = remaining === 0;
-    if (card && card.classList.contains('ready') !== ready) card.classList.toggle('ready', ready);
-    if (!remaining) {
-      stopTimer();
-      if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
-    }
-  }
-
-  function startTimer(seconds) {
-    stopTimer();
-    timerEnd = Date.now() + seconds * 1000;
-    updateTimer();
-    timerId = setInterval(updateTimer, 250);
-  }
-
-  function renderRestCard() {
-    const title = dialog.querySelector('.player-title h2');
-    const playerTitle = dialog.querySelector('.player-title');
-    if (!title || !playerTitle) return;
-
-    const exercise = title.textContent.trim();
-    const seconds = restSeconds[exercise] || 90;
-    let card = dialog.querySelector('.rest-card');
-    const completed = dialog.querySelectorAll('.player-set.completed').length;
-
-    if (exercise !== previousExercise) {
-      previousExercise = exercise;
-      previousCompleted = completed;
-      stopTimer();
-    } else if (completed > previousCompleted) {
-      startTimer(seconds);
-    }
-    previousCompleted = completed;
-
-    if (card && card.dataset.exercise === exercise) return;
-
-    if (!card) {
-      card = document.createElement('section');
-      card.className = 'rest-card';
-      playerTitle.insertAdjacentElement('afterend', card);
-    }
-
-    card.dataset.exercise = exercise;
-    card.classList.remove('ready');
-    card.innerHTML = `<span><small>Recommended rest</small><strong>${format(seconds)}</strong></span><span><small>Timer</small><strong data-rest-countdown>Not started</strong></span><button type="button" data-rest-start>Start</button>`;
-    card.querySelector('[data-rest-start]').onclick = () => startTimer(seconds);
-  }
-
-  new MutationObserver(renderRestCard).observe(dialog, { childList: true, subtree: true });
-  dialog.addEventListener('close', () => {
-    stopTimer();
-    previousExercise = '';
-    previousCompleted = 0;
-  });
+  const dialog=document.getElementById('workoutDialog');let timerId=null,timerEnd=0,previousExercise='',previousCompleted=0;
+  function format(seconds){const mins=Math.floor(seconds/60),secs=String(seconds%60).padStart(2,'0');return `${mins}:${secs}`}
+  function stopTimer(){clearInterval(timerId);timerId=null}
+  function updateTimer(){const display=dialog.querySelector('[data-rest-countdown]');if(!display)return stopTimer();const remaining=Math.max(0,Math.ceil((timerEnd-Date.now())/1000)),value=remaining?format(remaining):'Ready';if(display.textContent!==value)display.textContent=value;const card=display.closest('.rest-card'),ready=remaining===0;if(card&&card.classList.contains('ready')!==ready)card.classList.toggle('ready',ready);if(!remaining){stopTimer();if(navigator.vibrate)navigator.vibrate([120,80,120])}}
+  function startTimer(seconds){stopTimer();timerEnd=Date.now()+seconds*1000;updateTimer();timerId=setInterval(updateTimer,250)}
+  function renderRestCard(){const title=dialog.querySelector('.player-title h2'),playerTitle=dialog.querySelector('.player-title');if(!title||!playerTitle)return;const exercise=title.textContent.trim(),seconds=restSeconds[exercise]||90;let card=dialog.querySelector('.rest-card');const completed=dialog.querySelectorAll('.player-set.completed').length;if(exercise!==previousExercise){previousExercise=exercise;previousCompleted=completed;stopTimer()}else if(completed>previousCompleted)startTimer(seconds);previousCompleted=completed;if(card&&card.dataset.exercise===exercise)return;if(!card){card=document.createElement('section');card.className='rest-card';playerTitle.insertAdjacentElement('afterend',card)}card.dataset.exercise=exercise;card.classList.remove('ready');card.innerHTML=`<span><small>Recommended rest</small><strong>${format(seconds)}</strong></span><span><small>Timer</small><strong data-rest-countdown>Not started</strong></span><button type="button" data-rest-start>Start</button>`;card.querySelector('[data-rest-start]').onclick=()=>startTimer(seconds)}
+  new MutationObserver(renderRestCard).observe(dialog,{childList:true,subtree:true});dialog.addEventListener('close',()=>{stopTimer();previousExercise='';previousCompleted=0});
 })();
