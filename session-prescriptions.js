@@ -28,7 +28,7 @@
 
   const restByExercise = {
     'Bench press':'2:30-3:00','Incline dumbbell press':'1:30','Shoulder press':'2:00','Lateral raise':'1:00','Triceps pressdown':'1:00',
-    'Pull-ups':'2:00','Barbell row':'2:00','Lat pulldown':'1:30','Face pull':'1:00','Hanging knee raise':'1:00',
+    'Pull-ups':'2:00','Barbell row':'2:00','Lat pulldown':'1:30','Face pull':'1:00','Dumbbell curl':'1:15','Hanging knee raise':'1:00','Dead bug':'1:00',
     'Back squat':'3:00','Romanian deadlift':'2:30','Bulgarian split squat':'1:30','Leg curl':'1:15','Calf raise':'1:00'
   };
 
