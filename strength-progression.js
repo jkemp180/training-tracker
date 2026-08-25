@@ -18,13 +18,18 @@
 
   const bodyweight = new Set(['Pull-ups','Hanging knee raise','Dead bug']);
   const roundTo = (value, increment) => Math.round(value / increment) * increment;
+  const isOnIncrement = (value, increment) => Math.abs((value / increment) - Math.round(value / increment)) < 0.001;
 
-  // Clean up old invented dumbbell/machine prescriptions such as 13.5 or 29.5 kg.
+  // Repair only impossible old loads. Use the last actually performed load rather than rounding an invented load upward.
   Object.entries(state.prescriptions || {}).forEach(([name, sets]) => {
     const rule = rules[name];
     if (!rule || rule.mode !== 'range' || !Array.isArray(sets)) return;
-    sets.forEach(set => {
-      if (set.weight) set.weight = roundTo(set.weight, rule.increment);
+    const historySets = state.history?.[name]?.at(-1)?.sets;
+    sets.forEach((set,index) => {
+      if (!set.weight || isOnIncrement(+set.weight, rule.increment)) return;
+      const lastActual = +historySets?.[index]?.weight || 0;
+      set.weight = lastActual && isOnIncrement(lastActual, rule.increment) ? lastActual : roundTo(+set.weight, rule.increment);
+      set.reps = rule.max;
     });
   });
   save();
@@ -38,7 +43,7 @@
   }
 
   function nextPrescription(name, actualSets, targetSets) {
-    if (bodyweight.has(name)) return actualSets.map(set => ({weight:set.weight,reps:set.reps}));
+    if (bodyweight.has(name)) return targetSets.map(set => ({weight:set.weight,reps:set.reps}));
     const rule = rules[name];
     const success = targetWasCompleted(actualSets, targetSets);
     if (!rule || !success) return targetSets.map(set => ({weight:set.weight,reps:set.reps}));
@@ -47,13 +52,13 @@
       return targetSets.map(set => ({weight:set.weight ? roundTo(+set.weight + rule.increment, rule.increment) : set.weight,reps:set.reps}));
     }
 
-    const reachedTop = actualSets.every(set => (+set.reps || 0) >= rule.max);
+    const reachedTop = targetSets.every(set => (+set.reps || 0) >= rule.max);
     if (reachedTop) {
-      return actualSets.map(set => ({weight:set.weight ? roundTo(+set.weight + rule.increment, rule.increment) : set.weight,reps:rule.min}));
+      return targetSets.map(set => ({weight:set.weight ? roundTo(+set.weight + rule.increment, rule.increment) : set.weight,reps:rule.min}));
     }
 
-    // Same load, add one rep per set until the top of the range is reached.
-    return actualSets.map(set => ({weight:roundTo(+set.weight || 0, rule.increment),reps:Math.min(rule.max, Math.max(rule.min, (+set.reps || rule.min) + 1))}));
+    // At the same load, earn one more prescribed rep per set. A missed target simply repeats unchanged.
+    return targetSets.map(set => ({weight:roundTo(+set.weight || 0, rule.increment),reps:Math.min(rule.max, Math.max(rule.min, (+set.reps || rule.min) + 1))}));
   }
 
   finishStrength = function progressionAwareFinishStrength() {
