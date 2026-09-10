@@ -1,6 +1,7 @@
 (() => {
   const DRAFT_KEY = 'hybrid-training-strength-drafts-v1';
   const dialog = document.getElementById('workoutDialog');
+  let suppressDraftSave = false;
 
   function readDrafts() {
     try {
@@ -24,7 +25,7 @@
   }
 
   function persistDraft() {
-    if (!player?.w || player.w.type !== 'strength') return;
+    if (suppressDraftSave || !player?.w || player.w.type !== 'strength') return;
     if (state.logs[player.w.id]?.completed) {
       clearDraft(player.w.id);
       return;
@@ -40,8 +41,7 @@
     writeDrafts(drafts);
   }
 
-  function restoreDraft(workout) {
-    const draft = readDrafts()[workout.id];
+  function restoreDraftObject(draft, workout) {
     if (!draft?.results || state.logs[workout.id]?.completed) return false;
     player.index = Math.max(0, Math.min(player.defs.length - 1, +draft.exerciseIndex || 0));
     player.defs.forEach(def => {
@@ -93,12 +93,6 @@
     return baseOpenWorkout(index);
   };
 
-  const baseOpenStrengthPlayer = openStrengthPlayer;
-  openStrengthPlayer = function draftAwareOpenStrengthPlayer(index, workout) {
-    baseOpenStrengthPlayer(index, workout);
-    if (restoreDraft(workout)) renderPlayer();
-  };
-
   const baseRenderPlayer = renderPlayer;
   renderPlayer = function autosavingRenderPlayer() {
     persistDraft();
@@ -113,6 +107,20 @@
       }
       player.restoredDraft = false;
     }
+  };
+
+  const baseOpenStrengthPlayer = openStrengthPlayer;
+  openStrengthPlayer = function draftAwareOpenStrengthPlayer(index, workout) {
+    const savedDraft = readDrafts()[workout.id];
+    suppressDraftSave = true;
+    try {
+      baseOpenStrengthPlayer(index, workout);
+      restoreDraftObject(savedDraft, workout);
+    } finally {
+      suppressDraftSave = false;
+    }
+    if (player?.restoredDraft) renderPlayer();
+    else persistDraft();
   };
 
   dialog.addEventListener('change', event => {
