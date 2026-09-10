@@ -10,9 +10,14 @@
         const worker = registration.installing;
         if (!worker) return;
         worker.addEventListener('statechange', () => {
-          if (worker.state === 'activated' && navigator.serviceWorker.controller) {
-            window.location.reload();
+          if (worker.state !== 'activated' || !navigator.serviceWorker.controller) return;
+          const dialog = document.getElementById('workoutDialog');
+          if (dialog?.open) {
+            const reloadAfterClose = () => window.location.reload();
+            dialog.addEventListener('close', reloadAfterClose, {once:true});
+            return;
           }
+          window.location.reload();
         });
       });
     } catch (error) {
